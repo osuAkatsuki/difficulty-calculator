@@ -16,7 +16,7 @@ using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Difficulty;
 using osu.Game.Rulesets.Taiko;
 using osu.Game.Rulesets.Taiko.Difficulty;
-
+using System.Reflection;
 using static DifficultyCalculator.Globals;
 
 namespace DifficultyCalculator
@@ -246,14 +246,25 @@ namespace DifficultyCalculator
 
         private static List<Ruleset> getRulesets()
         {
-            var rulesets = new List<Ruleset>();
+            const string ruleset_library_prefix = "osu.Game.Rulesets";
 
-            foreach (var ruleset in new Type?[] { Type.GetType("OsuRuleset"), Type.GetType("TaikoRuleset"), Type.GetType("CatchRuleset"), Type.GetType("ManiaRuleset") })
+            var rulesetsToProcess = new List<Ruleset>();
+
+            foreach (string file in Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, $"{ruleset_library_prefix}.*.dll"))
             {
-                rulesets.Add((Ruleset)Activator.CreateInstance(ruleset!)!);
+                try
+                {
+                    var assembly = Assembly.LoadFrom(file);
+                    Type type = assembly.GetTypes().First(t => t.IsPublic && t.IsSubclassOf(typeof(Ruleset)));
+                    rulesetsToProcess.Add((Ruleset)Activator.CreateInstance(type));
+                }
+                catch
+                {
+                    throw new Exception($"Failed to load ruleset ({file})");
+                }
             }
 
-            return rulesets;
+            return rulesetsToProcess;
         }
 
         private static int getModBitwise(int rulesetId, List<APIMod> mods)
