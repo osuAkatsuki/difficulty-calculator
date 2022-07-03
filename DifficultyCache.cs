@@ -27,8 +27,8 @@ namespace DifficultyCalculator
         private static readonly DifficultyAttributes empty_attributes = new DifficultyAttributes(Array.Empty<Mod>(), -1);
 
         private readonly Dictionary<DifficultyRequest, Task<DifficultyAttributes>> attributeTaskCache = new Dictionary<DifficultyRequest, Task<DifficultyAttributes>>();
-        private readonly Dictionary<string, DifficultyAttributes> attributeCache = new Dictionary<string, DifficultyAttributes>();
-        private readonly Dictionary<string, double> difficultyCache = new Dictionary<string, double>();
+        private readonly Dictionary<DifficultyRequest, DifficultyAttributes> attributeCache = new Dictionary<DifficultyRequest, DifficultyAttributes>();
+        private readonly Dictionary<DifficultyRequest, double> difficultyCache = new Dictionary<DifficultyRequest, double>();
 
         private readonly ILogger logger;
 
@@ -46,8 +46,8 @@ namespace DifficultyCalculator
             if (string.IsNullOrWhiteSpace(request.BeatmapMd5))
                 return 0;
 
-            if (difficultyCache.ContainsKey(request.BeatmapMd5))
-                return difficultyCache[request.BeatmapMd5];
+            if (difficultyCache.ContainsKey(request))
+                return difficultyCache[request];
 
             var databaseDifficulty = await getDatabasedDifficulty(request);
             if (databaseDifficulty != default(float))
@@ -56,7 +56,7 @@ namespace DifficultyCalculator
                 sr = (await computeAttributes(request)).StarRating;
 
             lock (difficultyCache)
-                difficultyCache.Add(request.BeatmapMd5, sr);
+                difficultyCache.Add(request, sr);
 
             return sr;
         }
@@ -68,8 +68,8 @@ namespace DifficultyCalculator
             if (string.IsNullOrWhiteSpace(request.BeatmapMd5))
                 return empty_attributes;
 
-            if (attributeCache.ContainsKey(request.BeatmapMd5))
-                return attributeCache[request.BeatmapMd5];
+            if (attributeCache.ContainsKey(request))
+                return attributeCache[request];
 
             var databaseAttributes = await getDatabasedAttributes(request);
             if (databaseAttributes != null)
@@ -78,7 +78,7 @@ namespace DifficultyCalculator
                 attrs = await computeAttributes(request);
 
             lock (attributeCache)
-                attributeCache.Add(request.BeatmapMd5, attrs);
+                attributeCache.Add(request, attrs);
 
             return attrs;
         }
