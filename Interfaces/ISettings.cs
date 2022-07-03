@@ -6,7 +6,6 @@
         string SQLUser { get; }
         string SQLPassword { get; }
         string SQLDatabase { get; }
-        int ThreadCount { get; }
         string BeatmapFolderPath { get; }
     }
 }

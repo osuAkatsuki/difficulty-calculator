@@ -3,6 +3,5 @@
     "SQLUser": "",
     "SQLPassword": "",
     "SQLDatabase": "akatsuki",
-    "ThreadCount": 2,
     "BeatmapFolderPath": "/home/akatsuki/beatmaps"
 }
