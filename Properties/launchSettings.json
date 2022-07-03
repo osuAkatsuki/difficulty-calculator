@@ -1,12 +1,14 @@
 {
+  "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "difficulty-calculator": {
+    "DifficultyCalculator": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "dotnetRunMessages": "true",
+      "launchBrowser": false,
+      "applicationUrl": "http://0.0.0.0:7005",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:61713;http://localhost:61714"
+      }
     }
   }
 }
