@@ -27,8 +27,8 @@ namespace DifficultyCalculator
         private static readonly DifficultyAttributes empty_attributes = new DifficultyAttributes(Array.Empty<Mod>(), -1);
 
         private readonly Dictionary<DifficultyRequest, Task<DifficultyAttributes>> attributeTaskCache = new Dictionary<DifficultyRequest, Task<DifficultyAttributes>>();
-        private readonly Dictionary<DifficultyRequest, DifficultyAttributes> attributeCache = new Dictionary<DifficultyRequest, DifficultyAttributes>();
-        private readonly Dictionary<DifficultyRequest, double> difficultyCache = new Dictionary<DifficultyRequest, double>();
+        private readonly Dictionary<string, DifficultyAttributes> attributeCache = new Dictionary<string, DifficultyAttributes>();
+        private readonly Dictionary<string, double> difficultyCache = new Dictionary<string, double>();
 
         private readonly ILogger logger;
 
@@ -46,8 +46,8 @@ namespace DifficultyCalculator
             if (string.IsNullOrWhiteSpace(request.BeatmapMd5))
                 return 0;
 
-            if (difficultyCache.ContainsKey(request))
-                return difficultyCache[request];
+            if (difficultyCache.ContainsKey(request.BeatmapMd5))
+                return difficultyCache[request.BeatmapMd5];
 
             var databaseDifficulty = await getDatabasedDifficulty(request);
             if (databaseDifficulty != default(float))
@@ -56,7 +56,7 @@ namespace DifficultyCalculator
                 sr = (await computeAttributes(request)).StarRating;
 
             lock (difficultyCache)
-                difficultyCache.Add(request, sr);
+                difficultyCache.Add(request.BeatmapMd5, sr);
 
             return sr;
         }
@@ -68,8 +68,8 @@ namespace DifficultyCalculator
             if (string.IsNullOrWhiteSpace(request.BeatmapMd5))
                 return empty_attributes;
 
-            if (attributeCache.ContainsKey(request))
-                return attributeCache[request];
+            if (attributeCache.ContainsKey(request.BeatmapMd5))
+                return attributeCache[request.BeatmapMd5];
 
             var databaseAttributes = await getDatabasedAttributes(request);
             if (databaseAttributes != null)
@@ -78,7 +78,7 @@ namespace DifficultyCalculator
                 attrs = await computeAttributes(request);
 
             lock (attributeCache)
-                attributeCache.Add(request, attrs);
+                attributeCache.Add(request.BeatmapMd5, attrs);
 
             return attrs;
         }
@@ -244,22 +244,10 @@ namespace DifficultyCalculator
             }
 
             lock (attributeCache)
-            {
-                foreach (var req in attributeCache.Keys.ToArray())
-                {
-                    if (req.BeatmapMd5 == beatmapMd5)
-                        attributeCache.Remove(req);
-                }
-            }
+                attributeCache.Remove(beatmapMd5);
 
             lock (difficultyCache)
-            {
-                foreach (var req in difficultyCache.Keys.ToArray())
-                {
-                    if (req.BeatmapMd5 == beatmapMd5)
-                        difficultyCache.Remove(req);
-                }
-            }
+                difficultyCache.Remove(beatmapMd5);
         }
 
         private async Task<WorkingBeatmap> getBeatmap(int beatmapId)
@@ -268,7 +256,10 @@ namespace DifficultyCalculator
 
             var beatmapFilePath = $"{Settings.BeatmapFolderPath}/{beatmapId}.osu";
             if (File.Exists(beatmapFilePath))
+            {
+                logger.LogInformation($"Retrieved {beatmapId}'s file from disk");
                 return new LoaderWorkingBeatmap(new MemoryStream(File.ReadAllBytes(beatmapFilePath)));
+            }
 
             var req = new WebRequest($"https://old.ppy.sh/osu/{beatmapId}")
             {
