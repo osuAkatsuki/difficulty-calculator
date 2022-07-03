@@ -26,13 +26,14 @@ namespace DifficultyCalculator
         private static readonly List<Ruleset> available_rulesets = getRulesets();
         private static readonly DifficultyAttributes empty_attributes = new DifficultyAttributes(Array.Empty<Mod>(), -1);
 
-        private readonly Dictionary<DifficultyRequest, Task<DifficultyAttributes>> attributesCache = new Dictionary<DifficultyRequest, Task<DifficultyAttributes>>();
-        private readonly IConfiguration config;
+        private readonly Dictionary<DifficultyRequest, Task<DifficultyAttributes>> attributeTaskCache = new Dictionary<DifficultyRequest, Task<DifficultyAttributes>>();
+        private readonly Dictionary<DifficultyRequest, DifficultyAttributes> attributeCache = new Dictionary<DifficultyRequest, DifficultyAttributes>();
+        private readonly Dictionary<DifficultyRequest, double> difficultyCache = new Dictionary<DifficultyRequest, double>();
+
         private readonly ILogger logger;
 
-        public DifficultyCache(IConfiguration config, ILogger<DifficultyCache> logger)
+        public DifficultyCache(ILogger<DifficultyCache> logger)
         {
-            this.config = config;
             this.logger = logger;
         }
 
@@ -40,26 +41,46 @@ namespace DifficultyCalculator
 
         public async Task<double> GetDifficultyRating(DifficultyRequest request)
         {
+            double sr;
+
             if (string.IsNullOrWhiteSpace(request.BeatmapMd5))
                 return 0;
 
+            if (difficultyCache.ContainsKey(request))
+                return difficultyCache[request];
+
             var databaseDifficulty = await getDatabasedDifficulty(request);
             if (databaseDifficulty != default(float))
-                return databaseDifficulty;
+                sr = databaseDifficulty;
+            else
+                sr = (await computeAttributes(request)).StarRating;
 
-            return (await computeAttributes(request)).StarRating;
+            lock (difficultyCache)
+                difficultyCache.Add(request, sr);
+
+            return sr;
         }
 
         public async Task<DifficultyAttributes> GetAttributes(DifficultyRequest request)
         {
+            DifficultyAttributes attrs;
+
             if (string.IsNullOrWhiteSpace(request.BeatmapMd5))
                 return empty_attributes;
 
+            if (attributeCache.ContainsKey(request))
+                return attributeCache[request];
+
             var databaseAttributes = await getDatabasedAttributes(request);
             if (databaseAttributes != null)
-                return databaseAttributes;
+                attrs = databaseAttributes;
+            else
+                attrs = await computeAttributes(request);
 
-            return await computeAttributes(request);
+            lock (attributeCache)
+                attributeCache.Add(request, attrs);
+
+            return attrs;
         }
 
         private async Task<DifficultyAttributes?> getDatabasedAttributes(DifficultyRequest request)
@@ -138,11 +159,11 @@ namespace DifficultyCalculator
         {
             Task<DifficultyAttributes>? task;
 
-            lock (attributesCache)
+            lock (attributeTaskCache)
             {
-                if (!attributesCache.TryGetValue(request, out task))
+                if (!attributeTaskCache.TryGetValue(request, out task))
                 {
-                    attributesCache[request] = task = Task.Run(async () =>
+                    attributeTaskCache[request] = task = Task.Run(async () =>
                     {
                         var apiMods = request.GetMods();
 
@@ -213,12 +234,30 @@ namespace DifficultyCalculator
         {
             logger.LogInformation("Purging (beatmap: {BeatmapMd5})", beatmapMd5);
 
-            lock (attributesCache)
+            lock (attributeTaskCache)
             {
-                foreach (var req in attributesCache.Keys.ToArray())
+                foreach (var req in attributeTaskCache.Keys.ToArray())
                 {
                     if (req.BeatmapMd5 == beatmapMd5)
-                        attributesCache.Remove(req);
+                        attributeTaskCache.Remove(req);
+                }
+            }
+
+            lock (attributeCache)
+            {
+                foreach (var req in attributeCache.Keys.ToArray())
+                {
+                    if (req.BeatmapMd5 == beatmapMd5)
+                        attributeCache.Remove(req);
+                }
+            }
+
+            lock (difficultyCache)
+            {
+                foreach (var req in difficultyCache.Keys.ToArray())
+                {
+                    if (req.BeatmapMd5 == beatmapMd5)
+                        difficultyCache.Remove(req);
                 }
             }
         }
