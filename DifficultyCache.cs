@@ -244,10 +244,22 @@ namespace DifficultyCalculator
             }
 
             lock (attributeCache)
-                attributeCache.Remove(beatmapMd5);
+            {
+                foreach (var req in attributeCache.Keys.ToArray())
+                {
+                    if (req.BeatmapMd5 == beatmapMd5)
+                        attributeCache.Remove(req);
+                }
+            }
 
             lock (difficultyCache)
-                difficultyCache.Remove(beatmapMd5);
+            {
+                foreach (var req in difficultyCache.Keys.ToArray())
+                {
+                    if (req.BeatmapMd5 == beatmapMd5)
+                        difficultyCache.Remove(req);
+                }
+            }
         }
 
         private async Task<WorkingBeatmap> getBeatmap(int beatmapId)
