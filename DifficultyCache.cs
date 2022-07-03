@@ -271,7 +271,9 @@ namespace DifficultyCalculator
             if (req.ResponseStream.Length == 0)
                 throw new Exception($"Retrieved zero-length beatmap ({beatmapId})!");
 
-            return new LoaderWorkingBeatmap(req.ResponseStream);
+            var responseBuffer = req.GetResponseData();
+            File.WriteAllBytes(beatmapFilePath, responseBuffer);
+            return new LoaderWorkingBeatmap(new MemoryStream(responseBuffer));
         }
 
         private static List<Ruleset> getRulesets()
