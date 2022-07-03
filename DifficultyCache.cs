@@ -190,7 +190,7 @@ namespace DifficultyCalculator
                                 await conn.ExecuteAsync(
                                     "INSERT INTO beatmap_attributes (beatmap_md5, mode, mods, attribute_id, attribute_value) "
                                     + "VALUES (@BeatmapMd5, @Mode, @Mods, @Attribute, @Value) "
-                                    + "ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
+                                    + "ON DUPLICATE KEY UPDATE attribute_value = VALUES(attribute_value)",
                                     parameters.ToArray()
                                 );
                             }
