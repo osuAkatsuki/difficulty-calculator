@@ -194,7 +194,7 @@ namespace DifficultyCalculator
                                 {
                                     BeatmapMd5 = request.BeatmapMd5,
                                     RulesetId = request.RulesetId,
-                                    ModValue = (int)attributes.Mods.ToLegacy(),
+                                    ModValue = (int)mods.ToLegacy(),
                                     Diff = attributes.StarRating
                                 });
 
@@ -206,7 +206,7 @@ namespace DifficultyCalculator
                                     {
                                         BeatmapMd5 = request.BeatmapMd5,
                                         Mode = request.RulesetId,
-                                        Mods = (int)attributes.Mods.ToLegacy(),
+                                        Mods = (int)mods.ToLegacy(),
                                         Attribute = mapping.attributeId,
                                         Value = Convert.ToSingle(mapping.value)
                                     });
