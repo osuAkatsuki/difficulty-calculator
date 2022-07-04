@@ -126,8 +126,12 @@ namespace DifficultyCalculator
                 default:
                     throw new InvalidOperationException($"Invalid ruleset: {request.RulesetId}");
             }
+            
+            var ruleset = available_rulesets.First(r => r.RulesetInfo.OnlineID == request.RulesetId);
+            var workingBeatmap = await getBeatmap(request.BeatmapId);
+            var beatmap = workingBeatmap.GetPlayableBeatmap(ruleset.RulesetInfo);
 
-            attributes.FromDatabaseAttributes(rawDifficultyAttributes.ToDictionary(a => (int)a.attribute_id, e => (double)e.attribute_value));
+            attributes.FromDatabaseAttributes(rawDifficultyAttributes.ToDictionary(a => (int)a.attribute_id, e => (double)e.attribute_value), beatmap.BeatmapInfo.OnlineInfo);
 
             return attributes;
         }
